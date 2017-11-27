@@ -24,9 +24,9 @@ func (table *SSCacheMap) Set(key interface{}, value interface{}, lifeSpan time.D
 func (table *SSCacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
 	item := NewSSCacheItem(key, value, lifeSpan)
 
-	v, notFound := table.items.LoadOrStore(key, item)
+	v, loaded := table.items.LoadOrStore(key, item)
 
-	if !notFound {
+	if loaded {
 		v.(*SSCacheItem).createdOn = time.Now()
 	}
 
