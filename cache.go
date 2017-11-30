@@ -2,16 +2,11 @@ package sscache
 
 import (
 	"sync"
-	"time"
 )
 
 func NewCache(name string) *SSCacheMap {
 
-	value := &SSCacheMap{name, sync.Map{}, nil}
-
-	value.timer = time.AfterFunc(0*time.Second, func() {
-		go value.expirationCheck()
-	})
+	value := &SSCacheMap{name, sync.Map{}}
 
 	return value
 }

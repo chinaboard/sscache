@@ -4,21 +4,10 @@ import "time"
 
 type SSCacheItem struct {
 	key interface{}
-
 	value interface{}
-
 	lifeSpan time.Duration
-
 	createdOn time.Time
-}
-
-func NewSSCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *SSCacheItem {
-	return &SSCacheItem{
-		key,
-		data,
-		lifeSpan,
-		time.Now(),
-	}
+	timer *time.Timer
 }
 
 func (item *SSCacheItem) Key() interface{} {
