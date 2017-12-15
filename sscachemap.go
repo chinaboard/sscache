@@ -15,19 +15,8 @@ func (table *SSCacheMap) newSSCacheItem(key interface{}, data interface{}, lifeS
         key,
         data,
         lifeSpan,
-        time.Now(), nil}
+        time.Now()}
 
-    item.timer = time.AfterFunc(item.lifeSpan, func() {
-        if item.lifeSpan == 0 {
-            return
-        }
-        for {
-            if item.lifeSpan > 0 && time.Now().Sub(item.createdOn) > item.lifeSpan {
-                table.Delete(item.key)
-            }
-            time.Sleep(100 * time.Millisecond)
-        }
-    })
     return item
 }
 
@@ -59,4 +48,22 @@ func (table *SSCacheMap) Get(key interface{}) (interface{}, bool) {
 
 func (table *SSCacheMap) Delete(key interface{}) {
     table.items.Delete(key)
+}
+
+func (table *SSCacheMap) expirationCheck() {
+    for {
+        now := time.Now()
+        keys := make([]interface{}, 0)
+        table.items.Range(func(key, value interface{}) bool {
+            item := value.(*SSCacheItem)
+            if item.lifeSpan > 0 && now.Sub(item.createdOn) > item.lifeSpan {
+                keys = append(keys, key)
+            }
+            return true
+        })
+        for _, key := range keys {
+            table.items.Delete(key)
+        }
+        time.Sleep(100 * time.Millisecond)
+    }
 }

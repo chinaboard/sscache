@@ -7,7 +7,6 @@ type SSCacheItem struct {
 	value interface{}
 	lifeSpan time.Duration
 	createdOn time.Time
-	timer *time.Timer
 }
 
 func (item *SSCacheItem) Key() interface{} {
