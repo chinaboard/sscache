@@ -26,26 +26,33 @@ func (table *CacheMap) Range(trans func(key interface{}, value interface{}) bool
 }
 
 func (table *CacheMap) Set(key interface{}, value interface{}, lifeSpan time.Duration) {
-    item := table.newCacheItem(key, value, lifeSpan)
+    item :=  func() *CacheItem { return table.newCacheItem(key, value, lifeSpan) }
+    table.items.Store(key, item)
+}
+
+func (table *CacheMap) set(key interface{}, value *CacheItem) {
+    item :=  func() *CacheItem { return value }
     table.items.Store(key, item)
 }
 
 func (table *CacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
-    v:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
+    v,_:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
     return v.value
 }
 
 func (table *CacheMap) GetOrUpdate(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
-    v:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
-    v.value=value
-    v.createdOn=time.Now()
+    v,get:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
+    if get{
+        v.createdOn=time.Now()
+        table.set(key,v)
+    }
     return v.value
 }
 
 func (table *CacheMap) Get(key interface{}) (interface{}, bool) {
     v, ok := table.items.Load(key)
     if ok {
-        return v.(*CacheItem).value, ok
+        return v.(func() *CacheItem)().value, ok
     }
     return nil, ok
 }
@@ -59,7 +66,7 @@ func (table *CacheMap) expirationCheck() {
         now := time.Now()
         keys := make([]interface{}, 0)
         table.items.Range(func(key, value interface{}) bool {
-            item := value.(*CacheItem)
+            item := value.(func() *CacheItem)()
             if item.lifeSpan > 0 && now.Sub(item.createdOn) > item.lifeSpan {
                 keys = append(keys, key)
             }
@@ -72,9 +79,9 @@ func (table *CacheMap) expirationCheck() {
     }
 }
 
-func (table *CacheMap) lazyLoad(key interface{}, f func() *CacheItem) *CacheItem {
+func (table *CacheMap) lazyLoad(key interface{}, f func() *CacheItem) (*CacheItem,bool) {
     if g, ok := table.items.Load(key); ok {
-        return g.(func() *CacheItem)()
+        return g.(func() *CacheItem)(),ok
     }
 
     var (
@@ -88,5 +95,5 @@ func (table *CacheMap) lazyLoad(key interface{}, f func() *CacheItem) *CacheItem
         })
         return x
     })
-    return g.(func() *CacheItem)()
+    return g.(func() *CacheItem)(),false
 }
