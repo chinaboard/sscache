@@ -32,6 +32,12 @@ func (table *CacheMap) Set(key interface{}, value interface{}, lifeSpan time.Dur
 
 func (table *CacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
     v:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
+    return v.value
+}
+
+func (table *CacheMap) GetOrUpdate(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
+    v:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
+    v.value=value
     v.createdOn=time.Now()
     return v.value
 }
