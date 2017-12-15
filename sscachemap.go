@@ -40,13 +40,15 @@ func (table *CacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan tim
     return v.value
 }
 
-func (table *CacheMap) GetOrUpdate(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
-    v,get:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
-    if get{
-        v.createdOn=time.Now()
-        table.set(key,v)
-    }
-    return v.value
+func (table *CacheMap) GetAndRenew(key interface{}) (interface{},bool) {
+    v,ok:=table.Get(key)
+    if ok{
+        vv:=v.(func()*CacheItem)()
+        vv.createdOn = time.Now()
+        table.set(key,vv)
+    return vv.value,ok
+        }
+        return nil,ok
 }
 
 func (table *CacheMap) Get(key interface{}) (interface{}, bool) {
