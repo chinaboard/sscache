@@ -2,6 +2,7 @@ package sscache
 
 import (
     "sync"
+    "time"
 )
 
 func NewCache(name string) *SSCacheMap {

@@ -8,6 +8,7 @@ import (
 type SSCacheMap struct {
     name  string
     items sync.Map
+    timer time.Timer
 }
 
 func (table *SSCacheMap) newSSCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *SSCacheItem {
