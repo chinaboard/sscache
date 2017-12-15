@@ -83,4 +83,4 @@ func (table *CacheMap) lazyLoad(key interface{}, f func() *CacheItem) *CacheItem
         return x
     })
     return g.(func() *CacheItem)()
-})
+}
