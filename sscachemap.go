@@ -5,14 +5,14 @@ import (
     "time"
 )
 
-type SSCacheMap struct {
+type CacheMap struct {
     name  string
     items sync.Map
-    timer time.Timer
+    timer *time.Timer
 }
 
-func (table *SSCacheMap) newSSCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *SSCacheItem {
-    item := &SSCacheItem{
+func (table *CacheMap) newCacheItem(key interface{}, data interface{}, lifeSpan time.Duration) *CacheItem {
+    item := &CacheItem{
         key,
         data,
         lifeSpan,
@@ -21,42 +21,39 @@ func (table *SSCacheMap) newSSCacheItem(key interface{}, data interface{}, lifeS
     return item
 }
 
-func (table *SSCacheMap) Range(trans func(key interface{}, value interface{}) bool) {
+func (table *CacheMap) Range(trans func(key interface{}, value interface{}) bool) {
     table.items.Range(trans)
 }
 
-func (table *SSCacheMap) Set(key interface{}, value interface{}, lifeSpan time.Duration) {
-    item := table.newSSCacheItem(key, value, lifeSpan)
+func (table *CacheMap) Set(key interface{}, value interface{}, lifeSpan time.Duration) {
+    item := table.newCacheItem(key, value, lifeSpan)
     table.items.Store(key, item)
 }
 
-func (table *SSCacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
-    item := table.newSSCacheItem(key, value, lifeSpan)
-    v, loaded := table.items.LoadOrStore(key, item)
-    if loaded {
-        v.(*SSCacheItem).createdOn = time.Now()
-    }
-    return v.(*SSCacheItem).value
+func (table *CacheMap) GetOrAdd(key interface{}, value interface{}, lifeSpan time.Duration) interface{} {
+    v:=table.lazyLoad(key,func()*CacheItem{return table.newCacheItem(key,value,lifeSpan)})
+    v.createdOn=time.Now()
+    return v.value
 }
 
-func (table *SSCacheMap) Get(key interface{}) (interface{}, bool) {
+func (table *CacheMap) Get(key interface{}) (interface{}, bool) {
     v, ok := table.items.Load(key)
     if ok {
-        return v.(*SSCacheItem).value, ok
+        return v.(*CacheItem).value, ok
     }
     return nil, ok
 }
 
-func (table *SSCacheMap) Delete(key interface{}) {
+func (table *CacheMap) Delete(key interface{}) {
     table.items.Delete(key)
 }
 
-func (table *SSCacheMap) expirationCheck() {
+func (table *CacheMap) expirationCheck() {
     for {
         now := time.Now()
         keys := make([]interface{}, 0)
         table.items.Range(func(key, value interface{}) bool {
-            item := value.(*SSCacheItem)
+            item := value.(*CacheItem)
             if item.lifeSpan > 0 && now.Sub(item.createdOn) > item.lifeSpan {
                 keys = append(keys, key)
             }
@@ -68,3 +65,22 @@ func (table *SSCacheMap) expirationCheck() {
         time.Sleep(100 * time.Millisecond)
     }
 }
+
+func (table *CacheMap) lazyLoad(key interface{}, f func() *CacheItem) *CacheItem {
+    if g, ok := table.items.Load(key); ok {
+        return g.(func() *CacheItem)()
+    }
+
+    var (
+        once sync.Once
+        x *CacheItem
+    )
+    g, _ := table.items.LoadOrStore(key, func() *CacheItem {
+        once.Do(func() {
+            x = f()
+            table.items.Store(key, func() *CacheItem { return x })
+        })
+        return x
+    })
+    return g.(func() *CacheItem)()
+})

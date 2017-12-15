@@ -2,25 +2,25 @@ package sscache
 
 import "time"
 
-type SSCacheItem struct {
+type CacheItem struct {
 	key interface{}
 	value interface{}
 	lifeSpan time.Duration
 	createdOn time.Time
 }
 
-func (item *SSCacheItem) Key() interface{} {
+func (item *CacheItem) Key() interface{} {
 	return item.key
 }
 
-func (item *SSCacheItem) Value() interface{} {
+func (item *CacheItem) Value() interface{} {
 	return item.value
 }
 
-func (item *SSCacheItem) LifeSpan() time.Duration {
+func (item *CacheItem) LifeSpan() time.Duration {
 	return item.lifeSpan
 }
 
-func (item *SSCacheItem) CreatedOn() time.Time {
+func (item *CacheItem) CreatedOn() time.Time {
 	return item.createdOn
 }
