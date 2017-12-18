@@ -41,11 +41,10 @@ func (table *CacheMap) Delete(key interface{}) {
 
 func (table *CacheMap) expirationCheck() {
 	for {
-		now := time.Now()
 		keys := make([]interface{}, 0)
 		table.items.Range(func(key, value interface{}) bool {
 			item := value.(*CacheItem)
-			if item.lifeSpan > 0 && now.Sub(item.createdOn) > item.lifeSpan {
+			if item.lifeSpan > 0 && time.Since(item.createdOn) > item.lifeSpan {
 				keys = append(keys, key)
 			}
 			return true
